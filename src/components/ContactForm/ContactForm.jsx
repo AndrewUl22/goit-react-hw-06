@@ -1,65 +1,92 @@
-import { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { addContact } from '../../redux/contactsSlice';
-import { Form, Label, Input, Button } from './ContactForm.styled';
-import { v4 as uuidv4 } from 'uuid';
+import { ErrorMessage, Field, Form, Formik } from "formik";
+import s from "./ContactForm.module.css";
+import { useId } from "react";
+import * as Yup from "yup";
+import { useDispatch } from "react-redux";
+import { addContact } from "../../redux/contactsSlice";
+
+const FeedbackSchema = Yup.object().shape({
+  name: Yup.string()
+    .min(3, "Too Short!")
+    .max(50, "Too Long!")
+    .required("Required"),
+  number: Yup.string()
+    .matches(
+      /^\d{3}-\d{2}-\d{2}$/,
+      "Invalid format! Expected format: XXX-XX-XX"
+    )
+    .min(3, "Too Short!")
+    .max(50, "Too Long!")
+    .required("Required"),
+});
 
 const ContactForm = () => {
+  const initialValues = {
+    name: "",
+    number: "",
+  };
   const dispatch = useDispatch();
-  const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
-
-  const contacts = useSelector((state) => state.contacts.items);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    if (name === 'name') setName(value);
-    else if (name === 'number') setNumber(value);
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const existingContact = contacts.find(
-      (contact) => contact.name === name || contact.number === number
+  const onSubmit = (values, actions) => {
+    dispatch(
+      addContact({
+        id: crypto.randomUUID(),
+        name: values.name,
+        number: values.number,
+      })
     );
-    if (existingContact) {
-      alert(`${name} or ${number} is already in contacts`);
-      return;
-    }
 
-    dispatch(addContact({ id: uuidv4(), name, number }));
-    setName('');
-    setNumber('');
+    actions.resetForm();
   };
+
+  const nameFieldId = useId();
+  const numberFieldId = useId();
 
   return (
-    <Form onSubmit={handleSubmit}>
-      <Label>
-        Name
-        <Input
-          type="text"
-          name="name"
-          value={name}
-          pattern="^[a-zA-Zа-яА-Я]+(([' \-][a-zA-Zа-яА-Я ])?[a-zA-Zа-яА-Я]*)*$"
-          title="Name may contain only letters, apostrophe, dash and spaces."
-          required
-          onChange={handleChange}
-        />
-      </Label>
-      <Label>
-        Number
-        <Input
-          type="tel"
-          name="number"
-          value={number}
-          pattern="\+?\d{1,4}?[ .\-\s]?\(?\d{1,3}?\)?[ .\-\s]?\d{1,4}[ .\-\s]?\d{1,4}[ .\-\s]?\d{1,9}"
-          title="Phone number must be digits and can contain spaces, dashes, parentheses and can start with +."
-          required
-          onChange={handleChange}
-        />
-      </Label>
-      <Button type="submit">Add Contact</Button>
-    </Form>
+    <Formik
+      initialValues={initialValues}
+      onSubmit={onSubmit}
+      validationSchema={FeedbackSchema}
+    >
+      <Form className={s.form}>
+        <div className={s.label_wrapper}>
+          <label className={s.label} htmlFor={nameFieldId}>
+            Name
+          </label>
+          <Field
+            placeholder="Enter Name"
+            className={s.input}
+            type="text"
+            name="name"
+            id={nameFieldId}
+          />
+          <ErrorMessage
+            className={s.errprMessage}
+            name="name"
+            component="span"
+          />
+        </div>
+        <div className={s.label_wrapper}>
+          <label className={s.label} htmlFor={numberFieldId}>
+            Number
+          </label>
+          <Field
+            placeholder="Enter Number"
+            className={s.input}
+            type="text"
+            name="number"
+            id={numberFieldId}
+          />
+          <ErrorMessage
+            className={s.errprMessage}
+            name="number"
+            component="span"
+          />
+        </div>
+        <button className={s.btn_submite} type="submit">
+          Add Contact
+        </button>
+      </Form>
+    </Formik>
   );
 };
 
